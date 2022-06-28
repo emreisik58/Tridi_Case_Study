@@ -3,11 +3,18 @@ using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Tridi_Case_Study.Infrastructure;
 
 namespace Tridi_Case_Study.Controllers
 {
     public class AccountController : Controller
     {
+        private IQueryProviderRepo _QueryProviderRepo;
+
+        public AccountController(IQueryProviderRepo QueryProviderRepo)
+        {
+            _QueryProviderRepo = QueryProviderRepo;
+        }
         public class LoginModel
         {
             public string Username { get; set; }
@@ -17,13 +24,16 @@ namespace Tridi_Case_Study.Controllers
         [HttpGet]
         public IActionResult Login()
         {
+            ViewData["isLogin"] = true;
             return View();
         }
 
         [HttpPost]
         public async Task<IActionResult> Login(LoginModel loginModel)
         {
-            if (LoginUser(loginModel.Username, loginModel.Password))
+
+            ViewData["isLogin"] = true;
+            if (_QueryProviderRepo.getUserControl(loginModel.Username, loginModel.Password))
             {
                 var claims = new List<Claim>
             {
@@ -38,6 +48,9 @@ namespace Tridi_Case_Study.Controllers
                 //Just redirect to our index after logging in. 
                 return RedirectToAction("Index", "Home");
             }
+            else
+                ViewData["isLogin"] = false;
+
             return View();
         }
 
@@ -45,7 +58,7 @@ namespace Tridi_Case_Study.Controllers
         {
             await HttpContext.SignOutAsync();
 
-            return RedirectToAction("Index");
+            return RedirectToAction("Login");
         }
 
         private bool LoginUser(string username, string password)

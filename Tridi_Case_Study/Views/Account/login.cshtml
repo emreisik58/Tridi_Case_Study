@@ -1,5 +1,6 @@
 ﻿@{
     Layout = null;
+    
 }
  
 <!DOCTYPE html>
@@ -24,7 +25,15 @@
 <body>
     <div class="container">
         <h2>Giriş</h2>
- 
+        @if (!(bool)ViewData["isLogin"])
+        {
+              
+        <div class="alert alert-danger">
+            <strong>Giriş Yapılamadı</strong> Bilgileriniz hatalı, lütfen kontrol ediniz. <a href="#" class="alert-link"></a>.
+          </div>
+
+        
+        }
         <form action="/Account/Login" method="post">
             <div class="form-group">
                 <label>Kullanıcı Adı</label>
@@ -39,6 +48,7 @@
             </div>
  
         </form>
+
     </div>
 </body>
 </html>

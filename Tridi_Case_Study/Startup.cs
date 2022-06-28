@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -8,6 +10,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Tridi_Case_Study.Infrastructure;
+using Tridi_Case_Study.Models;
+using Tridi_Case_Study.Services;
 
 namespace Tridi_Case_Study
 {
@@ -25,46 +30,57 @@ namespace Tridi_Case_Study
         {
             services.AddControllers();
 
+            services.AddTransient<IQueryProviderRepo, QueryProviderRepo>();
+
             services.AddMvc(services => services.EnableEndpointRouting = false);
 
+            services.AddDbContext<TridiContext>(options => options.UseSqlServer(Configuration.GetConnectionString("MSSQL")));
             services.AddCors();
-
-
-            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(Options =>
+            services.AddAuthentication(options =>
             {
-                Options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(Configuration.GetSection("AppSettings:Token").Value)),
-                    ValidateIssuer = false,
-                    ValidateAudience = false
-                };
+                options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            }).AddCookie(options =>
+            {
+                options.LoginPath = new PathString("/Account/Login/");
+                options.AccessDeniedPath = new PathString("/Account/Forbidden/");
             });
+
 
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            app.UseCors(options => options.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
-            else
+
+            using (var scope = app.ApplicationServices.CreateScope())
             {
-                app.UseExceptionHandler("/Home/Error");
+
+                var context = scope.ServiceProvider.GetRequiredService<TridiContext>();
+                context.Database.Migrate();
             }
-            app.UseStaticFiles();
-
-            app.UseAuthorization();
             app.UseRouting();
-
+            app.UseStaticFiles();
+            app.UseAuthentication();
+            app.UseAuthorization();
             app.UseEndpoints(endpoints =>
             {
+                endpoints.MapControllers();
+
                 endpoints.MapControllerRoute(
                     name: "default",
                     pattern: "{controller=Home}/{action=Index}/{id?}");
             });
+
+
+
+            app.UseMvc();
 
 
 
